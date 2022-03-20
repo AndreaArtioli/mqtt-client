@@ -20,24 +20,6 @@ int nclient = 0;
 AsyncMqttClient client[MAX_CLIENT];
 const short MQTT_PORT = 1883;
 
-void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) {
-  Serial.println("Publish received.");
-  Serial.print("  topic: ");
-  Serial.println(topic);
-  Serial.print("  qos: ");
-  Serial.println(properties.qos);
-  Serial.print("  dup: ");
-  Serial.println(properties.dup);
-  Serial.print("  retain: ");
-  Serial.println(properties.retain);
-  Serial.print("  len: ");
-  Serial.println(len);
-  Serial.print("  index: ");
-  Serial.println(index);
-  Serial.print("  total: ");
-  Serial.println(total);
-}
-
 void setup() {
 #ifdef PORT
   ArduinoOTA.setPort(PORT);
@@ -62,13 +44,14 @@ void setup() {
 #endif
 
 #ifdef HOSTNAME
-  const char* hostname = String(STRINGIZE_VALUE_OF(HOSTNAME)).c_str();
+  ArduinoOTA.setHostname(STRINGIZE_VALUE_OF(HOSTNAME));
+  WiFi.setHostname(STRINGIZE_VALUE_OF(HOSTNAME));
 #else
-  const char* hostname = "ESP-MQTT-CLIENT-" + String(random(100)).c_str();
+  auto val = random(100);
+  ArduinoOTA.setHostname(("ESP-MQTT-CLIENT-" + String(val)).c_str());
+  WiFi.setHostname(("ESP-MQTT-CLIENT-" + String(val)).c_str());
 #endif
 
-  ArduinoOTA.setHostname(hostname);
-  WiFi.setHostname(hostname);
   ArduinoOTA.begin();
 
   nclient = MDNS.queryService("_mqtt", "_tcp");
@@ -81,9 +64,8 @@ void setup() {
 
     for( int i = 0; i < nclient; i++){
       client[i].setServer(MDNS.IP(i), MQTT_PORT);
-      client[i].onMessage(onMqttMessage);
+      client[i].setClientId(STRINGIZE_VALUE_OF(HOSTNAME));
       client[i].connect();
-      client[i].subscribe("prova/test", 0);
 
       Serial.println("Ho trovato: " + MDNS.hostname(i));
     }
